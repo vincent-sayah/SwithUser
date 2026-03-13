@@ -1,6 +1,6 @@
 # SwitchUser pour ILIAS 10
 
-Ce package est une version renommée et compatible **ILIAS 10** du plugin de prise de contrôle de session utilisateur.
+Ce package est une version compatible **ILIAS 10** d'un plugin de prise de contrôle de session utilisateur.
 
 ## Nom et identifiant technique
 
