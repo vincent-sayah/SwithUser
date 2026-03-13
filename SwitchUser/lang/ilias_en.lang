@@ -1,0 +1,20 @@
+<!-- language file start -->
+plugin_name#:#SwitchUser
+cfg_title#:#SwitchUser
+cfg_description#:#Search for a user account and start impersonation.
+cfg_placeholder#:#Login, first name, last name or e-mail
+cfg_search#:#Search
+cfg_help#:#Use only for administration or support purposes. Test on staging first.
+cfg_no_results#:#No matching user found.
+cfg_col_login#:#Login
+cfg_col_name#:#Name
+cfg_col_email#:#E-mail
+cfg_col_action#:#Action
+cfg_takeover#:#Log in as user
+msg_no_permission#:#You are not allowed to use SwitchUser.
+msg_user_not_found#:#The selected user could not be found.
+msg_same_user#:#You are already this user.
+msg_invalid_stop#:#Impersonation can only be stopped by returning to the original account.
+msg_takeover_started#:#You are now logged in as “%s”.
+msg_takeover_stopped#:#The original session “%s” has been restored.
+msg_active_impersonation#:#You are currently using another user account. <a href="%s">Return to the original account (%s)</a>.
