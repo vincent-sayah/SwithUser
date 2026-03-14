@@ -1,7 +1,7 @@
 <!-- language file start -->
 plugin_name#:#SwitchUser
 cfg_title#:#SwitchUser
-cfg_description#:#Recherchez un compte utilisateur et démarrez l’impersonation.
+cfg_description#:#Recherchez un compte utilisateur pour se connecter temporairement avec l'identité de l’utilisateur ciblé.
 cfg_placeholder#:#Login, prénom, nom ou e-mail
 cfg_search#:#Rechercher
 cfg_help#:#À utiliser uniquement dans un contexte d’administration ou de support. Tester d’abord sur une préproduction.
