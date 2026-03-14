@@ -19,13 +19,22 @@ class ilSwitchUserUIHookGUI extends ilUIHookPluginGUI
         global $DIC;
 
         $request = $DIC->http()->wrapper()->query();
+        if (!$request->has('target')) {
+            return;
+        }
+
         $target = $request->retrieve('target', $DIC->refinery()->kindlyTo()->string());
         if ($target !== ilSwitchUserPlugin::PLUGIN_ID) {
             return;
         }
 
+        if (!$request->has('user_id')) {
+            $DIC->ui()->mainTemplate()->setOnScreenMessage('failure', $this->txt('msg_user_not_found'), true);
+            $this->redirectToReferrerOrDashboard();
+        }
+
         $user_id = $request->retrieve('user_id', $DIC->refinery()->kindlyTo()->int());
-        if ($user_id === null || $user_id <= 0) {
+        if ($user_id <= 0) {
             $DIC->ui()->mainTemplate()->setOnScreenMessage('failure', $this->txt('msg_user_not_found'), true);
             $this->redirectToReferrerOrDashboard();
         }
