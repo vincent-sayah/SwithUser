@@ -24,13 +24,17 @@ class ilSwitchUserUIHookGUI extends ilUIHookPluginGUI
         }
 
         $target = $request->retrieve('target', $DIC->refinery()->kindlyTo()->string());
-        if ($target !== ilSwitchUserPlugin::PLUGIN_ID) {
+
+        if ($target === ilSwitchUserPlugin::TARGET_OPEN) {
+            $this->openSearchPage();
+        }
+
+        if ($target !== ilSwitchUserPlugin::TARGET_TAKEOVER) {
             return;
         }
 
         if (!$request->has('user_id')) {
-            $DIC->ui()->mainTemplate()->setOnScreenMessage('failure', $this->txt('msg_user_not_found'), true);
-            $this->redirectToReferrerOrDashboard();
+            $this->openSearchPage();
         }
 
         $user_id = $request->retrieve('user_id', $DIC->refinery()->kindlyTo()->int());
@@ -94,7 +98,7 @@ class ilSwitchUserUIHookGUI extends ilUIHookPluginGUI
 
         $link = ilUtil::appendUrlParameterString(
             'goto.php',
-            'target=' . rawurlencode(ilSwitchUserPlugin::PLUGIN_ID) . '&user_id=' . $original_user_id
+            'target=' . rawurlencode(ilSwitchUserPlugin::TARGET_TAKEOVER) . '&user_id=' . $original_user_id
         );
         $login = (string) ($_SESSION[self::SESSION_ORIGINAL_USER_LOGIN] ?? ('#' . $original_user_id));
         $message = sprintf(
@@ -123,6 +127,69 @@ class ilSwitchUserUIHookGUI extends ilUIHookPluginGUI
     }
     window.__switchUserBannerInjected = true;
 
+    var topSelectors = [
+        '.il-maincontrols-metabar',
+        '.il-layout-page-header',
+        '.navbar',
+        '.il-header',
+        'header'
+    ];
+
+    var findTopHeader = function () {
+        for (var i = 0; i < topSelectors.length; i++) {
+            var nodes = document.querySelectorAll(topSelectors[i]);
+            for (var j = 0; j < nodes.length; j++) {
+                var node = nodes[j];
+                if (!node || !node.getBoundingClientRect) {
+                    continue;
+                }
+                var rect = node.getBoundingClientRect();
+                if (rect.width < 300 || rect.height < 30 || rect.height > 220) {
+                    continue;
+                }
+                if (rect.top > 20) {
+                    continue;
+                }
+                return node;
+            }
+        }
+        return null;
+    };
+
+    var applyLinkStyles = function (banner) {
+        var links = banner.getElementsByTagName('a');
+        for (var i = 0; i < links.length; i++) {
+            links[i].style.color = '#ffffff';
+            links[i].style.fontWeight = '700';
+            links[i].style.textDecoration = 'underline';
+        }
+    };
+
+    var adjustOffset = function (banner) {
+        var header = findTopHeader();
+        var top = 0;
+        if (header) {
+            var rect = header.getBoundingClientRect();
+            top = Math.max(0, Math.round(rect.bottom));
+        }
+
+        banner.style.position = 'fixed';
+        banner.style.top = top + 'px';
+        banner.style.left = '0';
+        banner.style.right = '0';
+        banner.style.width = '100%';
+        banner.style.margin = '0';
+
+        var bannerHeight = Math.ceil(banner.getBoundingClientRect().height || 0);
+        if (document.body) {
+            document.body.style.paddingTop = (top + bannerHeight) + 'px';
+            document.body.setAttribute('data-switch-user-padding-top', String(top + bannerHeight));
+        }
+        if (document.documentElement) {
+            document.documentElement.style.scrollPaddingTop = (top + bannerHeight + 8) + 'px';
+        }
+    };
+
     var renderBanner = function () {
         if (!document.body || document.getElementById('switch-user-banner')) {
             return;
@@ -131,27 +198,37 @@ class ilSwitchUserUIHookGUI extends ilUIHookPluginGUI
         var banner = document.createElement('div');
         banner.id = 'switch-user-banner';
         banner.style.position = 'fixed';
-        banner.style.top = '0';
         banner.style.left = '0';
         banner.style.right = '0';
         banner.style.zIndex = '100000';
         banner.style.background = '#7a1212';
         banner.style.color = '#ffffff';
         banner.style.padding = '10px 16px';
+        banner.style.minHeight = '0';
+        banner.style.maxHeight = 'none';
         banner.style.textAlign = 'center';
         banner.style.fontSize = '14px';
+        banner.style.fontWeight = '600';
         banner.style.lineHeight = '1.4';
         banner.style.boxShadow = '0 2px 6px rgba(0,0,0,.2)';
+        banner.style.boxSizing = 'border-box';
+        banner.style.display = 'block';
+        banner.style.overflow = 'hidden';
+        banner.style.whiteSpace = 'normal';
         banner.innerHTML = {$message_html};
 
-        var links = banner.getElementsByTagName('a');
-        for (var i = 0; i < links.length; i++) {
-            links[i].style.color = '#ffffff';
-            links[i].style.fontWeight = '700';
-            links[i].style.textDecoration = 'underline';
-        }
+        applyLinkStyles(banner);
+        document.body.appendChild(banner);
+        adjustOffset(banner);
 
-        document.body.insertBefore(banner, document.body.firstChild);
+        var raf = window.requestAnimationFrame || function (cb) { return window.setTimeout(cb, 16); };
+        raf(function () {
+            adjustOffset(banner);
+        });
+
+        window.addEventListener('resize', function () {
+            adjustOffset(banner);
+        });
     };
 
     if (document.readyState === 'loading') {
@@ -162,6 +239,48 @@ class ilSwitchUserUIHookGUI extends ilUIHookPluginGUI
 })();
 </script>
 HTML;
+    }
+
+    private function openSearchPage(): void
+    {
+        global $DIC;
+
+        if (!$this->isAdministrativeUser()) {
+            $DIC->ui()->mainTemplate()->setOnScreenMessage('failure', $this->txt('msg_no_permission'), true);
+            $this->redirectToReferrerOrDashboard();
+        }
+
+        $term = '';
+        $rows = [];
+        if (strtoupper((string) $DIC->http()->request()->getMethod()) === 'POST') {
+            $term = trim((string) ($_POST['query'] ?? ''));
+            $rows = $this->searchPage()->findUsers($term);
+        }
+
+        $tpl = $DIC->ui()->mainTemplate();
+        $tpl->setTitle($this->txt('admin_menu_title'));
+        if (method_exists($tpl, 'setDescription')) {
+            $tpl->setDescription($this->txt('admin_menu_hint'));
+        }
+        $tpl->setContent(
+            $this->searchPage()->render(
+                ilUtil::appendUrlParameterString('goto.php', 'target=' . rawurlencode(ilSwitchUserPlugin::TARGET_OPEN)),
+                $term,
+                $rows
+            )
+        );
+
+        if (method_exists($tpl, 'printToStdout')) {
+            $tpl->printToStdout();
+        } elseif (method_exists($tpl, 'show')) {
+            $tpl->show();
+        }
+        exit;
+    }
+
+    private function searchPage(): ilSwitchUserSearchPage
+    {
+        return new ilSwitchUserSearchPage($this->getPluginObject() instanceof ilSwitchUserPlugin ? $this->getPluginObject() : null);
     }
 
     private function txt(string $key): string

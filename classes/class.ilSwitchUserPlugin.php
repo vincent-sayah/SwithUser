@@ -3,11 +3,13 @@
 declare(strict_types=1);
 
 /**
- * Minimal ILIAS 10-compatible SwitchUser plugin.
+ * SwitchUser plugin for ILIAS 10.
  */
 class ilSwitchUserPlugin extends ilUserInterfaceHookPlugin
 {
     public const PLUGIN_ID = 'swus';
+    public const TARGET_TAKEOVER = 'swus';
+    public const TARGET_OPEN = 'swus_open';
 
     public function getPluginName(): string
     {

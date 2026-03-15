@@ -18,3 +18,8 @@ msg_invalid_stop#:#Impersonation can only be stopped by returning to the origina
 msg_takeover_started#:#You are now logged in as “%s”.
 msg_takeover_stopped#:#The original session “%s” has been restored.
 msg_active_impersonation#:#You are currently using another user account. <a href="%s">Return to the original account (%s)</a>.
+admin_menu_title#:#SwitchUser
+admin_menu_hint#:#Direct SwitchUser access in user and role administration.
+cfg_admin_only#:#The user search has been moved to the administration area.
+cfg_admin_path#:#Open: Administration > Users and Roles > SwitchUser.
+cfg_admin_open#:#Open SwitchUser
