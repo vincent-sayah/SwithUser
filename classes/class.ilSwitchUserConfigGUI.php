@@ -1,43 +1,116 @@
 <?php
 
-declare(strict_types=1);
-
 /**
  * @ilCtrl_IsCalledBy ilSwitchUserConfigGUI: ilObjComponentSettingsGUI
  */
 class ilSwitchUserConfigGUI extends ilPluginConfigGUI
 {
-    public function performCommand(string $cmd = ''): void
+    public function performCommand(string $cmd): void
     {
-        $this->configure();
+        switch ($cmd) {
+            case 'search':
+                $this->search();
+                return;
+
+            case 'show':
+            default:
+                $this->show();
+                return;
+        }
     }
 
-    public function configure(): void
+    public function show(): void
     {
-        $this->tpl()->setTitle('SwitchUser');
-        $this->tpl()->setContent($this->renderInfoPage());
+        $this->guardAdmin();
+        $this->tpl()->setTitle($this->txt('admin_menu_title'));
+        if (method_exists($this->tpl(), 'setDescription')) {
+            $this->tpl()->setDescription($this->txt('admin_menu_hint'));
+        }
+        $this->tpl()->setContent(
+            $this->searchPage()->render(
+                $this->ctrl()->getFormAction($this, 'search'),
+                ilSwitchUserSecurity::actionUrl(),
+                ilSwitchUserSecurity::issueCsrfToken(),
+                '',
+                [],
+                true,
+                null
+            )
+        );
+    }
+
+    public function search(): void
+    {
+        $this->guardAdmin();
+
+        if (!$this->isPost() || !$this->hasValidCsrf()) {
+            $this->tpl()->setOnScreenMessage('failure', $this->txt('msg_invalid_request'), true);
+            $this->ctrl()->redirect($this, 'show');
+        }
+
+        $term = trim((string) ($_POST['query'] ?? ''));
+        $rows = $this->searchPage()->findUsers($term);
+
+        $this->tpl()->setTitle($this->txt('admin_menu_title'));
+        if (method_exists($this->tpl(), 'setDescription')) {
+            $this->tpl()->setDescription($this->txt('admin_menu_hint'));
+        }
+        $this->tpl()->setContent(
+            $this->searchPage()->render(
+                $this->ctrl()->getFormAction($this, 'search'),
+                ilSwitchUserSecurity::actionUrl(),
+                ilSwitchUserSecurity::issueCsrfToken(),
+                $term,
+                $rows,
+                true,
+                null
+            )
+        );
+    }
+
+    private function guardAdmin(): void
+    {
+        if (ilSwitchUserSecurity::isAdministrativeUser()) {
+            return;
+        }
+
+        $this->tpl()->setOnScreenMessage('failure', $this->txt('msg_no_permission'), true);
+        $this->ctrl()->redirectByClass('ildashboardgui', 'jumpToSelectedItems');
+    }
+
+    private function hasValidCsrf(): bool
+    {
+        return ilSwitchUserSecurity::validateCsrfToken((string) ($_POST['swus_csrf'] ?? ''));
+    }
+
+    private function isPost(): bool
+    {
+        return strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST';
+    }
+
+    private function ctrl(): ilCtrl
+    {
+        global $DIC;
+
+        return $DIC->ctrl();
     }
 
     private function tpl(): ilGlobalTemplateInterface
     {
         global $DIC;
+
         return $DIC->ui()->mainTemplate();
     }
 
-    private function openLink(): string
+    private function searchPage(): ilSwitchUserSearchPage
     {
-        return ilUtil::appendUrlParameterString('goto.php', 'target=' . rawurlencode(ilSwitchUserPlugin::TARGET_OPEN));
+        return new ilSwitchUserSearchPage(ilSwitchUserSecurity::getPlugin());
     }
 
-    private function renderInfoPage(): string
+    private function txt(string $key): string
     {
-        $url = htmlspecialchars($this->openLink(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $plugin = $this->getPluginObject();
 
-        return <<<HTML
-<div class="ilFormHeader">SwitchUser 1.6.1</div>
-<p>L'accès direct à la recherche utilisateur se fait via <code>goto.php?target=swus_open</code>.</p>
-<p>Le bouton ci-dessous ouvre exactement ce même écran de recherche.</p>
-<p><a class="btn btn-primary" href="{$url}">Ouvrir SwitchUser</a></p>
-HTML;
+        return ilSwitchUserSecurity::pluginText($plugin instanceof ilSwitchUserPlugin ? $plugin : null, $key);
     }
 }

@@ -1,5 +1,19 @@
 # SwitchUser - ILIAS 10
 
+Version 2.0.0 corrigée et durcie du plugin SwitchUser.
+
+## Principales corrections
+
+- abandon des actions de bascule en GET au profit d'actions POST ;
+- ajout d'un jeton CSRF côté session ;
+- journalisation des événements sensibles ;
+- régénération d'identifiant de session au début et à la fin de la bascule ;
+- refus de basculer vers un compte administrateur ;
+- suppression des fichiers de sauvegarde `.bak` ;
+- validation stricte des identifiants utilisateurs ;
+- bannière persistante avec bouton de retour sécurisé;
+- ajout d’un accès rapide visible dans l’interface (header) pour les administrateurs.
+
 ## Présentation
 
 **SwitchUser** est un plugin pour **ILIAS 10** permettant à un administrateur autorisé de se connecter temporairement avec l’identité d’un autre utilisateur.
@@ -81,6 +95,8 @@ Il ne doit pas être utilisé par des utilisateurs standards.
 Une fois le plugin activé, l’accès se fait depuis :
 
 **Administration > Etendre ILIAS > Plugins > SwitchUser > Configurer**
+ou
+**Via l'icone accessible dans le bandeau du haut.**
 
 ---
 
@@ -100,7 +116,7 @@ L’écran de configuration permet principalement de :
 
 ### 1. Rechercher un utilisateur
 
-Dans l’écran de configuration :
+Dans l’écran de recherche :
 
 1. saisir un login, un nom ou une adresse e-mail dans le champ prévu ;
 2. lancer la recherche ;

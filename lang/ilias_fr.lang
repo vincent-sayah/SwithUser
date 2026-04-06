@@ -1,25 +1,34 @@
 <!-- language file start -->
 plugin_name#:#SwitchUser
 cfg_title#:#SwitchUser
-cfg_description#:#Recherchez un compte utilisateur pour se connecter temporairement avec l'identité de l’utilisateur ciblé.
+cfg_description#:#Recherchez un compte utilisateur et démarrez une session de bascule contrôlée.
+cfg_security_note#:#Mode renforcé SSI : POST obligatoire, jeton CSRF requis, trace d’audit activée.
 cfg_placeholder#:#Login, prénom, nom ou e-mail
 cfg_search#:#Rechercher
-cfg_help#:#À utiliser uniquement dans un contexte d’administration ou de support. Tester d’abord sur une préproduction.
+cfg_help#:#Réservé aux opérations légitimes d’administration ou de support. N’utilisez pas ce mécanisme sur des comptes privilégiés. Revenez au compte d’origine dès la fin de l’intervention.
 cfg_no_results#:#Aucun utilisateur correspondant trouvé.
 cfg_col_login#:#Login
 cfg_col_name#:#Nom
 cfg_col_email#:#E-mail
 cfg_col_action#:#Action
-cfg_takeover#:#Se connecter en tant que
+cfg_takeover#:#Démarrer la bascule
+cfg_return_original#:#Revenir au compte d’origine
 msg_no_permission#:#Vous n’êtes pas autorisé à utiliser SwitchUser.
 msg_user_not_found#:#L’utilisateur sélectionné est introuvable.
 msg_same_user#:#Vous êtes déjà cet utilisateur.
-msg_invalid_stop#:#L’impersonation ne peut être arrêtée qu’en revenant au compte d’origine.
+msg_invalid_stop#:#Le compte d’origine ne peut pas être restauré dans l’état actuel de la session.
 msg_takeover_started#:#Vous êtes maintenant connecté en tant que « %s ».
 msg_takeover_stopped#:#La session d’origine « %s » a été restaurée.
-msg_active_impersonation#:#Vous utilisez actuellement le compte d’un autre utilisateur. <a href="%s">Revenir au compte d’origine (%s)</a>.
+msg_active_impersonation#:#Bascule active. Compte d’origine : %s.
+msg_invalid_request#:#La requête est invalide ou expirée. Relancez l’action depuis la page SwitchUser.
+msg_post_only#:#Cette action n’est acceptée qu’en POST.
+msg_already_impersonating#:#Une session de bascule est déjà active.
+msg_not_impersonating#:#Aucune session de bascule n’est actuellement active.
+msg_admin_target_forbidden#:#SwitchUser refuse la bascule vers un compte administrateur.
 admin_menu_title#:#SwitchUser
-admin_menu_hint#:#Accès direct à la recherche SwitchUser dans l’administration utilisateurs et rôles.
-cfg_admin_only#:#La recherche d’utilisateur a été déplacée dans l’administration.
-cfg_admin_path#:#Ouvrez : Administration > Utilisateurs et rôles > SwitchUser.
-cfg_admin_open#:#Ouvrir SwitchUser
+admin_menu_hint#:#Page d’administration.
+nav_mainmenu_title#:#Accès rapide SwitchUser
+nav_mainmenu_hint#:#Ouvrir l’interface SwitchUser depuis le menu latéral
+
+topbar_icon_label#:#Ouvrir SwitchUser
+topbar_icon_hint#:#Ouvrir l’interface SwitchUser depuis la barre du haut

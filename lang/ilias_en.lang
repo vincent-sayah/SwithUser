@@ -1,25 +1,34 @@
 <!-- language file start -->
 plugin_name#:#SwitchUser
 cfg_title#:#SwitchUser
-cfg_description#:#Search for a user account and start impersonation.
+cfg_description#:#Search for a user account and start a controlled impersonation session.
+cfg_security_note#:#Security-hardened mode: POST only, CSRF token required, audit trace enabled.
 cfg_placeholder#:#Login, first name, last name or e-mail
 cfg_search#:#Search
-cfg_help#:#Use only for administration or support purposes. Test on staging first.
+cfg_help#:#Reserved for legitimate administration or support actions. Do not use on privileged accounts. Return to the original account immediately after the intervention.
 cfg_no_results#:#No matching user found.
 cfg_col_login#:#Login
 cfg_col_name#:#Name
 cfg_col_email#:#E-mail
 cfg_col_action#:#Action
-cfg_takeover#:#Log in as user
+cfg_takeover#:#Start impersonation
+cfg_return_original#:#Return to the original account
 msg_no_permission#:#You are not allowed to use SwitchUser.
 msg_user_not_found#:#The selected user could not be found.
 msg_same_user#:#You are already this user.
-msg_invalid_stop#:#Impersonation can only be stopped by returning to the original account.
+msg_invalid_stop#:#The original account cannot be restored from the current session state.
 msg_takeover_started#:#You are now logged in as “%s”.
 msg_takeover_stopped#:#The original session “%s” has been restored.
-msg_active_impersonation#:#You are currently using another user account. <a href="%s">Return to the original account (%s)</a>.
+msg_active_impersonation#:#Impersonation active. Original account: %s.
+msg_invalid_request#:#The request is invalid or has expired. Please retry from the SwitchUser page.
+msg_post_only#:#This action is only accepted by POST.
+msg_already_impersonating#:#An impersonation session is already active.
+msg_not_impersonating#:#No impersonation session is currently active.
+msg_admin_target_forbidden#:#SwitchUser refuses to impersonate an administrator account.
 admin_menu_title#:#SwitchUser
-admin_menu_hint#:#Direct SwitchUser access in user and role administration.
-cfg_admin_only#:#The user search has been moved to the administration area.
-cfg_admin_path#:#Open: Administration > Users and Roles > SwitchUser.
-cfg_admin_open#:#Open SwitchUser
+admin_menu_hint#:#Hardened administration page.
+nav_mainmenu_title#:#SwitchUser quick access
+nav_mainmenu_hint#:#Open the SwitchUser interface from the side menu
+
+topbar_icon_label#:#Open SwitchUser
+topbar_icon_hint#:#Open the SwitchUser interface from the top bar

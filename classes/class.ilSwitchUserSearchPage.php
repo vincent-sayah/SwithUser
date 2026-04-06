@@ -2,42 +2,85 @@
 
 declare(strict_types=1);
 
+/**
+ * HTML renderer and user lookup helper for SwitchUser.
+ */
 class ilSwitchUserSearchPage
 {
-    /** @var ilSwitchUserPlugin|null */
-    private $plugin;
+    private ?ilSwitchUserPlugin $plugin;
 
     public function __construct(?ilSwitchUserPlugin $plugin = null)
     {
         $this->plugin = $plugin;
     }
 
-    public function render(string $action, string $term = '', array $rows = []): string
+    /**
+     * @param array<int, array<string, mixed>> $rows
+     */
+    public function render(
+        string $search_action,
+        string $action_url,
+        string $csrf_token,
+        string $term = '',
+        array $rows = [],
+        bool $allow_search = true,
+        ?string $original_login = null
+    ): string
     {
-        $title = htmlspecialchars($this->txt('cfg_title'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $description = htmlspecialchars($this->txt('cfg_description'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $placeholder = htmlspecialchars($this->txt('cfg_placeholder'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $button = htmlspecialchars($this->txt('cfg_search'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $help = htmlspecialchars($this->txt('cfg_help'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $value = htmlspecialchars($term, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $action_attr = htmlspecialchars($action, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $title = $this->esc($this->txt('cfg_title'));
+        $description = $this->esc($this->txt('cfg_description'));
+        $security_note = $this->esc($this->txt('cfg_security_note'));
+        $placeholder = $this->esc($this->txt('cfg_placeholder'));
+        $search_label = $this->esc($this->txt('cfg_search'));
+        $help = nl2br($this->esc($this->txt('cfg_help')));
+        $value = $this->esc($term);
+        $search_action_attr = $this->esc($search_action);
+        $action_url_attr = $this->esc($action_url);
+        $csrf_attr = $this->esc($csrf_token);
 
         $html = <<<HTML
-<div class="ilFormHeader">{$title}</div>
-<p>{$description}</p>
-<p><em>{$help}</em></p>
-<form method="post" action="{$action_attr}" class="form-horizontal">
-    <div class="form-group">
-        <label for="swus_query">{$placeholder}</label><br>
-        <input type="text" id="swus_query" name="query" value="{$value}" style="min-width: 30rem; max-width: 100%;" />
-        <button class="btn btn-primary" type="submit">{$button}</button>
-    </div>
-</form>
+<div class="switchuser-wrapper" style="max-width:1100px;margin:0 auto;">
+  <div class="switchuser-box" style="background:#fff;border:1px solid #dcdfe3;border-radius:12px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.05);">
+    <h2 style="margin:0 0 12px 0;">{$title}</h2>
+    <p style="margin:0 0 8px 0;">{$description}</p>
+    <p style="margin:0 0 18px 0;color:#7a1212;font-weight:600;">{$security_note}</p>
 HTML;
 
-        if ($term !== '') {
-            $html .= $this->renderResults($rows);
+        if ($allow_search === false && $original_login !== null && $original_login !== '') {
+            $active_message = $this->esc(sprintf($this->txt('msg_active_impersonation'), $original_login));
+            $return_label = $this->esc($this->txt('cfg_return_original'));
+
+            $html .= <<<HTML
+    <div style="margin:0 0 20px 0;padding:14px 16px;background:#fff5f5;border:1px solid #fecaca;border-left:4px solid #b91c1c;border-radius:8px;display:flex;gap:12px;justify-content:space-between;align-items:center;flex-wrap:wrap;">
+      <div style="font-weight:600;color:#7f1d1d;">{$active_message}</div>
+      <form method="post" action="{$action_url_attr}" style="margin:0;">
+        <input type="hidden" name="op" value="stop">
+        <input type="hidden" name="swus_csrf" value="{$csrf_attr}">
+        <button type="submit" style="padding:10px 14px;border:0;border-radius:8px;background:#b91c1c;color:#fff;font-weight:600;cursor:pointer;">{$return_label}</button>
+      </form>
+    </div>
+HTML;
         }
+
+        if ($allow_search) {
+            $html .= <<<HTML
+    <div style="margin:0 0 20px 0;padding:12px 14px;background:#f6f8fa;border-left:4px solid #6a737d;border-radius:6px;">{$help}</div>
+    <form method="post" action="{$search_action_attr}" style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;margin:0 0 18px 0;">
+      <input type="hidden" name="swus_csrf" value="{$csrf_attr}">
+      <input type="text" name="query" value="{$value}" placeholder="{$placeholder}" style="flex:1 1 420px;min-width:260px;padding:10px 12px;border:1px solid #c9ced6;border-radius:8px;">
+      <button type="submit" style="padding:10px 16px;border:0;border-radius:8px;background:#1f4b99;color:#fff;font-weight:600;cursor:pointer;">{$search_label}</button>
+    </form>
+HTML;
+
+            if ($term !== '') {
+                $html .= $this->renderResults($rows, $action_url_attr, $csrf_attr);
+            }
+        }
+
+        $html .= <<<HTML
+  </div>
+</div>
+HTML;
 
         return $html;
     }
@@ -53,17 +96,14 @@ HTML;
         }
 
         $quoted = '%' . $this->db()->escape($term, false) . '%';
-        $sql = "SELECT usr_id, login, firstname, lastname, email
-            FROM usr_data
-            WHERE active = " . $this->db()->quote(1, 'integer') . "
-              AND usr_id != " . $this->db()->quote(ANONYMOUS_USER_ID, 'integer') . "
-              AND (
-                    login LIKE " . $this->db()->quote($quoted, 'text') . "
-                 OR firstname LIKE " . $this->db()->quote($quoted, 'text') . "
-                 OR lastname LIKE " . $this->db()->quote($quoted, 'text') . "
-                 OR email LIKE " . $this->db()->quote($quoted, 'text') . "
-              )
-            ORDER BY login ASC";
+        $sql = "SELECT usr_id, login, firstname, lastname, email, active FROM usr_data"
+            . " WHERE active = " . $this->db()->quote(1, 'integer')
+            . " AND usr_id != " . $this->db()->quote(ANONYMOUS_USER_ID, 'integer')
+            . " AND (login LIKE " . $this->db()->quote($quoted, 'text')
+            . " OR firstname LIKE " . $this->db()->quote($quoted, 'text')
+            . " OR lastname LIKE " . $this->db()->quote($quoted, 'text')
+            . " OR email LIKE " . $this->db()->quote($quoted, 'text') . ")"
+            . " ORDER BY login ASC";
 
         $set = $this->db()->query($sql);
         $rows = [];
@@ -77,55 +117,65 @@ HTML;
         return $rows;
     }
 
-    private function renderResults(array $rows): string
+    /**
+     * @param array<int, array<string, mixed>> $rows
+     */
+    private function renderResults(array $rows, string $action_url_attr, string $csrf_attr): string
     {
         if ($rows === []) {
-            return '<p>' . htmlspecialchars($this->txt('cfg_no_results'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</p>';
+            return '<div style="padding:12px 14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;">'
+                . $this->esc($this->txt('cfg_no_results'))
+                . '</div>';
         }
 
-        $header_login = htmlspecialchars($this->txt('cfg_col_login'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $header_name = htmlspecialchars($this->txt('cfg_col_name'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $header_email = htmlspecialchars($this->txt('cfg_col_email'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $header_action = htmlspecialchars($this->txt('cfg_col_action'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $action_label = htmlspecialchars($this->txt('cfg_takeover'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $header_login = $this->esc($this->txt('cfg_col_login'));
+        $header_name = $this->esc($this->txt('cfg_col_name'));
+        $header_email = $this->esc($this->txt('cfg_col_email'));
+        $header_action = $this->esc($this->txt('cfg_col_action'));
+        $action_label = $this->esc($this->txt('cfg_takeover'));
 
         $html = <<<HTML
-<table class="table table-striped fullwidth">
+<div style="overflow-x:auto;">
+  <table style="width:100%;border-collapse:collapse;background:#fff;">
     <thead>
-        <tr>
-            <th>{$header_login}</th>
-            <th>{$header_name}</th>
-            <th>{$header_email}</th>
-            <th>{$header_action}</th>
-        </tr>
+      <tr>
+        <th style="text-align:left;padding:12px;border-bottom:2px solid #dcdfe3;">{$header_login}</th>
+        <th style="text-align:left;padding:12px;border-bottom:2px solid #dcdfe3;">{$header_name}</th>
+        <th style="text-align:left;padding:12px;border-bottom:2px solid #dcdfe3;">{$header_email}</th>
+        <th style="text-align:left;padding:12px;border-bottom:2px solid #dcdfe3;">{$header_action}</th>
+      </tr>
     </thead>
     <tbody>
 HTML;
 
         foreach ($rows as $row) {
-            $user_id = (int) $row['usr_id'];
-            $login = htmlspecialchars((string) $row['login'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-            $name = htmlspecialchars(trim((string) $row['firstname'] . ' ' . (string) $row['lastname']), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-            $email = htmlspecialchars((string) $row['email'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-            $url = htmlspecialchars(
-                ilUtil::appendUrlParameterString('goto.php', 'target=' . rawurlencode(ilSwitchUserPlugin::TARGET_TAKEOVER) . '&user_id=' . $user_id),
-                ENT_QUOTES | ENT_SUBSTITUTE,
-                'UTF-8'
-            );
+            $user_id = (int) ($row['usr_id'] ?? 0);
+            $login = $this->esc((string) ($row['login'] ?? ''));
+            $name = $this->esc(trim((string) ($row['firstname'] ?? '') . ' ' . (string) ($row['lastname'] ?? '')));
+            $email = $this->esc((string) ($row['email'] ?? ''));
+            $id_attr = $this->esc((string) $user_id);
 
             $html .= <<<HTML
-        <tr>
-            <td>{$login}</td>
-            <td>{$name}</td>
-            <td>{$email}</td>
-            <td><a class="btn btn-default" href="{$url}">{$action_label}</a></td>
-        </tr>
+      <tr>
+        <td style="padding:12px;border-bottom:1px solid #edf0f2;">{$login}</td>
+        <td style="padding:12px;border-bottom:1px solid #edf0f2;">{$name}</td>
+        <td style="padding:12px;border-bottom:1px solid #edf0f2;">{$email}</td>
+        <td style="padding:12px;border-bottom:1px solid #edf0f2;">
+          <form method="post" action="{$action_url_attr}" style="margin:0;">
+            <input type="hidden" name="op" value="start">
+            <input type="hidden" name="user_id" value="{$id_attr}">
+            <input type="hidden" name="swus_csrf" value="{$csrf_attr}">
+            <button type="submit" style="padding:8px 12px;border:0;border-radius:8px;background:#0f766e;color:#fff;font-weight:600;cursor:pointer;">{$action_label}</button>
+          </form>
+        </td>
+      </tr>
 HTML;
         }
 
         $html .= <<<HTML
     </tbody>
-</table>
+  </table>
+</div>
 HTML;
 
         return $html;
@@ -134,50 +184,17 @@ HTML;
     private function db(): ilDBInterface
     {
         global $DIC;
+
         return $DIC->database();
     }
 
     private function txt(string $key): string
     {
-        if ($this->plugin instanceof ilSwitchUserPlugin) {
-            return $this->plugin->txt($key);
-        }
+        return ilSwitchUserSecurity::pluginText($this->plugin, $key);
+    }
 
-        $lang = 'en';
-        if (isset($_COOKIE['lang'])) {
-            $lang = strtolower((string) $_COOKIE['lang']);
-        }
-
-        if ($lang === 'fr' || str_starts_with($lang, 'fr')) {
-            $map = [
-                'cfg_title' => 'SwitchUser',
-                'cfg_description' => 'Recherchez un compte utilisateur pour se connecter temporairement avec l\'identité de l’utilisateur ciblé.',
-                'cfg_placeholder' => 'Login, prénom, nom ou e-mail',
-                'cfg_search' => 'Rechercher',
-                'cfg_help' => 'À utiliser uniquement dans un contexte d’administration ou de support. Tester d’abord sur une préproduction.',
-                'cfg_no_results' => 'Aucun utilisateur correspondant trouvé.',
-                'cfg_col_login' => 'Login',
-                'cfg_col_name' => 'Nom',
-                'cfg_col_email' => 'E-mail',
-                'cfg_col_action' => 'Action',
-                'cfg_takeover' => 'Se connecter en tant que',
-            ];
-        } else {
-            $map = [
-                'cfg_title' => 'SwitchUser',
-                'cfg_description' => 'Search for a user account and start impersonation.',
-                'cfg_placeholder' => 'Login, first name, last name or e-mail',
-                'cfg_search' => 'Search',
-                'cfg_help' => 'Use only for administration or support purposes. Test on staging first.',
-                'cfg_no_results' => 'No matching user found.',
-                'cfg_col_login' => 'Login',
-                'cfg_col_name' => 'Name',
-                'cfg_col_email' => 'E-mail',
-                'cfg_col_action' => 'Action',
-                'cfg_takeover' => 'Log in as user',
-            ];
-        }
-
-        return $map[$key] ?? $key;
+    private function esc(string $value): string
+    {
+        return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 }
