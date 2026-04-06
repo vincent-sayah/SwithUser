@@ -62,15 +62,6 @@ La 2.0.0 introduit un **service transversal `ilSwitchUserSecurity`** qui central
 
 Le **contrôleur `ilSwitchUserUIHookGUI`** reste le point névralgique à l'exécution. Il pilote le routage `goto`, les validations préalables, la mutation de la session et l'injection du bandeau de retour.
 
-### 2.3 Écarts observés dans l'archive
-
-Deux artefacts résiduels restent présents dans le zip :
-
-- `classes/class.ilSwitchUserUIHookGUI.php.bak`
-- `switchuser_icon.svg` à la racine
-
-Ils ne sont pas utilisés dans le flux nominal observé. La présence du fichier `.bak` est en décalage avec la note de durcissement annonçant sa suppression. Il est recommandé de l'ôter du paquet de diffusion lors d'une prochaine release.
-
 ---
 
 ## 3. Vue d'ensemble de l'architecture
